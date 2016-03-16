@@ -56,6 +56,23 @@ def get_known_macs(kmfile):
         print("\tThen, try again.")
         raw_input("Press enter to continue...")
         return []
+def check_file_path(file):
+    ''' Check if the output file given is valid. '''
+    is_path = False
+    for c in file:
+        if c == '/': 
+            is_path = True
+            break
+    if is_path:
+        path = []
+        for x in file.split('/'): path.append(x)
+        path = path[1:-1] # Remove first blank and filename
+        file_path = ''
+        for x in path: file_path += '/' + x
+        if os.path.isdir(file_path): return True
+        else: return False
+    else: 
+        return True
 
 class Client():
     def __init__(self, hostname = '', ip = '', mac = '', tp = '', iface = ''):
@@ -117,7 +134,7 @@ if __name__ == '__main__':
         known_macs = get_known_macs(opts.kmfile) # MAC [0] - Name [1]
 
     print_header()
-    print "\nGetting information from the router..."
+    print "\nGetting information from the router...\n"
     # Use firefox to get page with javascript generated content
     with closing(Firefox()) as browser:
         browser.get(login_url)
@@ -161,10 +178,28 @@ if __name__ == '__main__':
     for x in range(0, len(hosts)):
         clients.append(Client(hosts[x], ips[x], macs[x], types[x], ifaces[x]))
     
+    raw_input("Press enter to show connected clients... ")
+    print_header()
     for c in clients: c.display()
 
     if opts.output:
-        text = ''
-        for c in clients: text += c.to_text()
+        print "\nSaving information in " + opts.output
+        text_to_file = ''
+        for c in clients: text_to_file += c.to_text()
         # create/open and write file
-        #print text
+        isdir = check_file_path(opts.output)
+        if isdir:
+            write_mode = 'a'
+            if os.path.isfile(opts.output):
+                overwrite = raw_input("The given file already exists.\nDo you want overwrite the existing file?[y/N]: ")
+                if overwrite == 'y' or overwrite == 'Y':
+                    write_mode = 'w'
+            try:
+                new_file = open(opts.output, write_mode)
+                new_file.write(text_to_file)
+                new_file.close()
+                print "The file has been saved [[ OK ]]"
+                print "You can see the file on: " + opts.output
+            except:
+                print "The file can't be saved [[ ERROR ]]"
+        else: print "Invalid path [[ ERROR ]]"
